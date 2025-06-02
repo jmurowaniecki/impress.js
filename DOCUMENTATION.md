@@ -6,10 +6,59 @@
 
 impress.js requires a Root Element. All the content of the presentation will be created inside that element. It is not recommended to manipulate any of the styles, attributes or classes that are created by impress.js inside the Root Element after initialization.
 
+To change the duration of the transition between slides use `data-transition-duration="2000"` giving it
+a number of ms. It defaults to 1000 (1s).
+
+When authoring impress.js presentations, you should target some screen size, which you can define here.
+The default is 1024 x 768. You should write your CSS as if this is the screen size used for the
+presentation. When you present your presentation on a screen (or browser window) of different size,
+impress.js will automatically scale the presentation to fit the screen. The minimum and maximum limits
+to this scaling can also be defined here.
+
+All impress.js steps are wrapped inside a div element of 0 size! This means that in your CSS you
+can't use relative values for width and height (example: `width: 100%`) to define the size of step elements.
+You need to use pixel values. The pixel values used here correspond to the `data-width` and `data-height`
+given to the `#impress` root element. When the presentation is viewed on a larger or smaller screen, impress.js
+will automatically scale the steps to fit the screen.
+
+**NOTE:** The default width and height have been changed to target HD screens in v1.2.0. If you
+don't set target width and height explicitly, layout and dimensions of your presentations are likely
+to be affected. In order to get back the old target resolution, use:
+
+    <div id="impress" data-width="1024" data-height="768" data-max-scale="1" data-min-scale="0"
+
+
+You can also control the perspective with `data-perspective="500"` giving it a number of pixels.
+It defaults to 1000. You can set it to 0 if you don't want any 3D effects.
+If you are willing to change this value make sure you understand how CSS perspective works:
+https://developer.mozilla.org/en/CSS/perspective
+
+See also [the plugin README](src/plugins/README.md) for documentation on `data-autoplay`.
+
+**Attributes**
+
+Attribute                | Default   | Explanation
+-------------------------|-----------|------------
+data-transition-duration | 1000 (ms) | Speed of transition between steps.
+data-width               | 1920 (px) | Width of target screen size. When presentation is viewed on a larger or smaller screen, impress.js will scale all content automatically.
+data-height              | 1080 (px) | Height of target screen size.
+data-max-scale           | 3         | Maximum scale factor. (Note that the default 1 will not increase content size on larger screens!)
+data-min-scale           | 0         | Minimum scale factor.
+data-perspective         | 1000      | Perspective for 3D rendering. See https://developer.mozilla.org/en/CSS/perspective
+
 **Example:**
 
 ```html
-<div id="impress"></div>
+<div id="impress"
+    data-transition-duration="1000"
+
+    data-width="1024"
+    data-height="768"
+    data-max-scale="3"
+    data-min-scale="0"
+    data-perspective="1000"
+
+    data-autoplay="7">
 ```
 
 ### Step Element
@@ -30,6 +79,13 @@ In the Step Element, you can define a specific set of default attributes and pos
 #### 2D Coordinates Positioning (data-x, data-y)
 
 Define the pixel based position in which the **center** of the [Step Element](#step-element) will be positioned inside the infinite canvas.
+
+**Attributes**
+
+Attribute                | Default   | Explanation
+-------------------------|-----------|------------
+data-x                   | 0         | X coordinate for step position
+data-y                   | 0         | Y coordinate for step position
 
 **Example:**
 
@@ -82,6 +138,11 @@ Define the pixel based position in which the **center** of the [Step Element](#s
 </div>
 ```
 
+**Note:** The introduction of the [rel](src/plugins/rel/README.md) plugin includes a slight backward incompatible change.
+Previously the default value for `data-x`, `data-y` and `data-z` was zero. The `rel` plugin changes the default to inherit
+the value of the previous slide. This means, you need to explicitly set these values to zero, if they ever were non-zero.
+
+
 #### 3D Rotation (data-rotate-x, data-rotate-y, data-rotate-z)
 
 You can not only position a [Step Element](#step-element) in 3D, but also rotate it around any axis.
@@ -105,6 +166,13 @@ You can of course rotate it around Z axis with `data-rotate-z` - it has exactly 
     <span class="footnote">* beat that, prezi ;)</span>
 </div>
 ```
+
+#### 3D Rotation Order (data-rotate-order)
+
+The order in which the CSS `rotateX(), rotateY(), rotateZ()` transforms are applied matters. This is because each rotation is relative to the then current position of the element.
+
+By default the rotation order is `data-rotate-order="xyz"`. For some advanced uses you may need to change it. The demo presentation [3D rotations](examples/3D-rotations/index.html) sets this attribute to rotate some steps into positions that are impossible to reach with the default order.
+
 
 ## CSS
 
@@ -189,6 +257,11 @@ It is recommended to add the class manually to the `body` element though, becaus
 }
 ```
 
+## Plugins
+
+Many new features are implemented as plugins. The [Plugins documentation](src/plugins/README.md) is the starting place to learn about those, as well as the README.md of [each plugin](src/plugins/).
+
+
 ## JavaScript
 
 ### impress( [ id ] )
@@ -229,6 +302,21 @@ rootElement.addEventListener( "impress:init", function() {
 impress().init();
 ```
 
+#### .tear()
+
+Resets the DOM to its original state, as it was before `init()` was called.
+
+This can be used to "unload" impress.js. A particular use case for this is, if you want to do
+dynamic changes to the presentation, you can do a teardown, apply changes, then call `init()`
+again. (In most cases, this will not cause flickering or other visible effects to the user,
+beyond the intended dynamic changes.)
+
+**Example:**
+
+```JavaScript
+impress().tear();
+```
+
 #### .next()
 
 Navigates to the next step of the presentation using the [`goto()` function](#impressgotostepindexstepelementidstepelement-duration).
@@ -241,7 +329,7 @@ api.init();
 api.next();
 ```
 
-#### impress().prev()
+#### .prev()
 
 Navigates to the previous step of the presentation using the [`goto()` function](#impressgotostepindexstepelementidstepelement-duration).
 
@@ -253,7 +341,7 @@ api.init();
 api.prev();
 ```
 
-#### impress().goto( stepIndex | stepElementId | stepElement, [ duration ] )
+#### .goto( stepIndex | stepElementId | stepElement, [ duration ] )
 
 Accepts a [`Number`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number) that represents the step index.
 
@@ -300,8 +388,8 @@ Triggers the `impress:stepenter` event in the [Root Element](#root-element) when
 
 ```JavaScript
 var rootElement = document.getElementById( "impress" );
-rootElement.addEventListener( "impress:stepenter", function() {
-  var currentStep = document.querySelector( ".present" );
+rootElement.addEventListener( "impress:stepenter", function(event) {
+  var currentStep = event.target;
   console.log( "Entered the Step Element '" + currentStep.id + "'" );
 });
 ```
@@ -312,8 +400,9 @@ Triggers the `impress:stepleave` event in the [Root Element](#root-element) when
 ```JavaScript
 var rootElement = document.getElementById( "impress" );
 rootElement.addEventListener( "impress:stepleave", function(event) {
-  var currentStep = event.target
-  console.log( "Left the Step Element '" + currentStep.id + "'" );
+  var currentStep = event.target;
+  var nextStep = event.detail.next;
+  console.log( "Left the Step Element '" + currentStep.id + "' and about to enter '" + nextStep.id );
 });
 ```
 
